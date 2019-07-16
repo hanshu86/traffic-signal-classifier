@@ -1,0 +1,983 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Self-Driving Car Engineer Nanodegree\n",
+    "\n",
+    "## Deep Learning\n",
+    "\n",
+    "## Project: Build a Traffic Sign Recognition Classifier\n",
+    "\n",
+    "In this notebook, a template is provided for you to implement your functionality in stages, which is required to successfully complete this project. If additional code is required that cannot be included in the notebook, be sure that the Python code is successfully imported and included in your submission if necessary. \n",
+    "\n",
+    "> **Note**: Once you have completed all of the code implementations, you need to finalize your work by exporting the iPython Notebook as an HTML document. Before exporting the notebook to html, all of the code cells need to have been run so that reviewers can see the final implementation and output. You can then export the notebook by using the menu above and navigating to  \\n\",\n",
+    "    \"**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission. \n",
+    "\n",
+    "In addition to implementing code, there is a writeup to complete. The writeup should be completed in a separate file, which can be either a markdown file or a pdf document. There is a [write up template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) that can be used to guide the writing process. Completing the code template and writeup template will cover all of the [rubric points](https://review.udacity.com/#!/rubrics/481/view) for this project.\n",
+    "\n",
+    "The [rubric](https://review.udacity.com/#!/rubrics/481/view) contains \"Stand Out Suggestions\" for enhancing the project beyond the minimum requirements. The stand out suggestions are optional. If you decide to pursue the \"stand out suggestions\", you can include the code in this Ipython notebook and also discuss the results in the writeup file.\n",
+    "\n",
+    "\n",
+    ">**Note:** Code and Markdown cells can be executed using the **Shift + Enter** keyboard shortcut. In addition, Markdown cells can be edited by typically double-clicking the cell to enter edit mode."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## Step 0: Load The Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Image Shape: (32, 32, 3)\n",
+      "\n",
+      "Training Set: 34799 Samples\n",
+      "Validation Set: 4410 Samples\n",
+      "Tesging Set: 12630 Samples\n",
+      "\n",
+      "Feature Shape: (34799, 32, 32, 3)\n",
+      "Labels Shape: (34799,)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Load pickled data\n",
+    "import pickle\n",
+    "import numpy as np\n",
+    "# Load the training, validation and testing data\n",
+    "\n",
+    "training_file = '../data/train.p'\n",
+    "validation_file= '../data/valid.p'\n",
+    "testing_file = '../data/test.p'\n",
+    "\n",
+    "with open(training_file, mode='rb') as f:\n",
+    "    train = pickle.load(f)\n",
+    "with open(validation_file, mode='rb') as f:\n",
+    "    valid = pickle.load(f)\n",
+    "with open(testing_file, mode='rb') as f:\n",
+    "    test = pickle.load(f)\n",
+    "    \n",
+    "X_train, y_train = train['features'], train['labels']\n",
+    "X_valid, y_valid = valid['features'], valid['labels']\n",
+    "X_test, y_test = test['features'], test['labels']\n",
+    "\n",
+    "# Lets check if data is not missing. Length of features and labels should match\n",
+    "assert(len(X_train) == len(y_train))\n",
+    "assert(len(X_valid) == len(y_valid))\n",
+    "assert(len(X_test) == len(y_test))\n",
+    "\n",
+    "# Print some stats for data that we gonna use\n",
+    "print()\n",
+    "print(\"Image Shape: {}\".format(X_train[0].shape))\n",
+    "print()\n",
+    "print(\"Training Set: {} Samples\".format(len(X_train)))\n",
+    "print(\"Validation Set: {} Samples\".format(len(X_valid)))\n",
+    "print(\"Tesging Set: {} Samples\".format(len(X_test)))\n",
+    "print()\n",
+    "print(\"Feature Shape: {}\".format(np.shape(X_train)))\n",
+    "print(\"Labels Shape: {}\".format(np.shape(y_train)))\n",
+    "# import matplotlib.pyplot as plt\n",
+    "# img = X_train[0].squeeze()\n",
+    "# plt.figure(figsize=(1,1))\n",
+    "# plt.imshow(img)\n",
+    "# print(X_train[0])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "## Step 1: Dataset Summary & Exploration\n",
+    "\n",
+    "The pickled data is a dictionary with 4 key/value pairs:\n",
+    "\n",
+    "- `'features'` is a 4D array containing raw pixel data of the traffic sign images, (num examples, width, height, channels).\n",
+    "- `'labels'` is a 1D array containing the label/class id of the traffic sign. The file `signnames.csv` contains id -> name mappings for each id.\n",
+    "- `'sizes'` is a list containing tuples, (width, height) representing the original width and height the image.\n",
+    "- `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. **THESE COORDINATES ASSUME THE ORIGINAL IMAGE. THE PICKLED DATA CONTAINS RESIZED VERSIONS (32 by 32) OF THESE IMAGES**\n",
+    "\n",
+    "Complete the basic data summary below. Use python, numpy and/or pandas methods to calculate the data summary rather than hard coding the results. For example, the [pandas shape method](http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.shape.html) might be useful for calculating some of the summary results. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Provide a Basic Summary of the Data Set Using Python, Numpy and/or Pandas"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Number of training examples = 34799\n",
+      "Number of testing examples = 12630\n",
+      "Number of validation examples = 4410\n",
+      "Image data shape = (32, 32, 3)\n",
+      "Number of classes = 43\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Replace each question mark with the appropriate value. \n",
+    "### Use python, pandas or numpy methods rather than hard coding the results\n",
+    "\n",
+    "# Number of training examples\n",
+    "n_train = len(X_train)\n",
+    "\n",
+    "# Number of validation examples\n",
+    "n_validation = len(X_valid)\n",
+    "\n",
+    "# Number of testing examples.\n",
+    "n_test = len(X_test)\n",
+    "\n",
+    "# What's the shape of an traffic sign image?\n",
+    "image_shape = X_train[0].shape\n",
+    "\n",
+    "# How many unique classes/labels there are in the dataset.\n",
+    "n_classes = len(np.unique(y_train))\n",
+    "\n",
+    "print(\"Number of training examples =\", n_train)\n",
+    "print(\"Number of testing examples =\", n_test)\n",
+    "print(\"Number of validation examples =\", n_validation)\n",
+    "print(\"Image data shape =\", image_shape)\n",
+    "print(\"Number of classes =\", n_classes)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Include an exploratory visualization of the dataset"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Visualize the German Traffic Signs Dataset using the pickled file(s). This is open ended, suggestions include: plotting traffic sign images, plotting the count of each sign, etc. \n",
+    "\n",
+    "The [Matplotlib](http://matplotlib.org/) [examples](http://matplotlib.org/examples/index.html) and [gallery](http://matplotlib.org/gallery.html) pages are a great resource for doing visualizations in Python.\n",
+    "\n",
+    "**NOTE:** It's recommended you start with something simple first. If you wish to do more, come back to it after you've completed the rest of the sections. It can be interesting to look at the distribution of classes in the training, validation and test set. Is the distribution the same? Are there more examples of some classes than others?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "5 Sign with highest Samples:  [38, 12, 13, 1, 2]\n",
+      "5 Sign with lowest Samples:  [0, 37, 19, 32]\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7fa0764aedd8>"
+      ]
+     },
+     "execution_count": 32,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAYUAAAD8CAYAAACYebj1AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADl0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uIDIuMS4wLCBodHRwOi8vbWF0cGxvdGxpYi5vcmcvpW3flQAAIABJREFUeJztvXmQHdd15vmdfFtt2AsEQZBgcYG4iCJFESbZo462RgtFqx2iIsZ2Ux7LlIMziPaIPVLbESN6CcktuSPo7hh53NEKtTkSQvSERpRsKUYYiW0OTJHB1kIKIMUNhEgsBAkQO6pQ+1vzzB+ZuOfkwyugCFS9V6/q+0VU1Hn3Zea9mVXv3czvnkVUFYQQQggARJ0eACGEkIUDJwVCCCEBTgqEEEICnBQIIYQEOCkQQggJcFIghBAS4KRACCEkwEmBkC5DRO4WkddEZK+IPNjp8ZDFhTB4jZDuQURyAF4H8BEAhwDsAPBJVX21owMji4Z8pwdwLgYHB3VoaKjTwyCLmOeee+6kqq7t9DjeAbcD2Kuq+wFARB4FcA+AGScF/zmqV0ZDu8az6S570ygQ9469N/O9pd/G7NjZjdgGUq7Wgj18ejzY1Up9xmEVIhM8+vt7gh3lrb3RaMxgW98atx5r841z5tUMJ64tXlSqNdTqdWm1/UJiQU8KQ0ND2LlzZ6eHQRYxIvJmp8fwDtkA4KB7fQjAHefaYWhoCDt2PAsAGN73j6G9Vm79hSaZL/LszBFFOXvPfaHWYv+F744V25d8rVYN9nTNvphHy1PBfvXNQ8H+7g+eDvabe09mB2m74zI3Edx+x/XBLq3sD/bYmE2Go6fHgj0+Xg52edrsesMmobobKwA03Ht+QlNva3RW+4u/egPdwHnXFETkChF5UkR2i8guEfls2r5aRLaLyJ7096q0XUTkP6V650si8j53rPvS7feIyH3zd1qELFpa3Wme9e0uIltEZKeI7Dxx4kQbhkUWC7N5UqgD+GNVfV5ElgF4TkS2A/g0gCdU9aF0setBAJ8H8BsANqU/dwD4GoA7RGQ1gC8C2Izkn/g5EdmmqiNzfVKELGIOAbjCvb4cwOHmjVT1YQAPA8DmzZvDpOFnlMjPJeJkIT/FSNMc5N6LWzejoa0lmbrfQex+NMpZH3lnR2fPda17dLe2pWIx2CuW9dkmYnf3/o7ey2Glgh2oVrPt46Zh+CeFet3JWu78Gu4iRqmZz3WHX895R6mqR1T1+dQeB7AbySPsPQAeSTd7BMAnUvseAH+nCc8AWCki6wF8FMB2VR1OJ4LtAO6e07MhZPGzA8AmEblKRIoA7gWwrcNjIouId7SmICJDAG4F8CyAdap6BEgmDhG5JN2slea54Rztc87Qgz8CABx46F/Ox+EJ6RiqWheRBwA8DiAHYKuq7urwsMgiYtaTgogMAPgegM+p6pg0P1a6TVu06Tnam/vZAmALAGzcuHFWYzszCQCcCMjiR1UfA/DYhewbO2mnETtJxX08vaSSa/7YqpNLvDdRw8lEbvMos7/rw2kUiZdtepzY5J86cm6b7IK3//oRtYXgovM4WjFg8lE+Z+NzChV6C9ZHuWIL4dWaXzTOfk01nGQUe08m772UkajSMbi+FjKzErlEpIBkQviWqn4/bT6WykJIfx9P22fSPGetharqZlXdvHZtN3kKEkJI9zMb7yMB8A0Au1X1K+6tbQDOeBDdB+AHrv33Uy+kOwGMpjLT4wDuEpFVqafSXWkbIYSQBcJs5KP3A/gUgJdF5IW07U8BPATguyJyP4C3APx2+t5jAD4GYC+AKQB/AACqOiwiX0ayUAYAX1LV4Tk5iwUMpS2yUFEno2QcjtwbWQ99QOVsWQTIyjlRJsDNb2P3oOKD19BrG5XWBbNv3dXBXjnaJGPVbf9Sr32NxaXlwS722nFlBvmoVDK5qurkI+99pE3uR+rcqOqxXSEfkAcfFBe8jxZ0WFjgvKNU1Z+g9XoAAHyoxfYK4DMzHGsrgK3vZICEEELaR3dMXV2GfzoghJBugpMCWfBQgps7/CN/1p9H3TY+ZUXTVpkgt9YeOnknP9XVPG6qrn3K5TIaPmVpLqpjk8G+ZdAcTSbz5knUPN5lfYVgb1hzWbCX9wwEu1Y0aaiUtzQX+ZLLr1S2NBdx1clHzbmPvJeR9z5y2zT81U3NfH6RBK8RQghZOnBSIIQQEqB8dBEwcpp0G7H3pMmkPjJp51wZtX0MmcZuH9deLpv0cviEZSc98KYlNDj0q/3BPunax4Zt+3rZSzhN43BBdBN95kE0tmxNsFdcZsGv64YsRGrNulW2jQtwq5UmrO+KSVo+QK15MDOl266JnrV9lOuO4LUlNSlQmyaEkHND+YgQQkiAkwIhhJDAkpKPCFnqZCqpuahbibyrqbObonl9+cqaqyx5csTcPHfvej3Yv3r+pWAf3Xcg2OVT5goKV9nM9xeLfT1F+SY9vlEJ5viYjWPsyKlgH95n6xYHXlwR7Es2XhnsoZtvDva6jZcEG64WQ71u6wvJIH0SPH/dXLu7zmcinXNRd9yDd8coCSGEtAVOCoQQQgJLVj6iJxJZOmhwi/SF5r17asbp0kkf9UZWPpos14L99pHTwX71+ReCvesnP7ftj9k2Wna9OIkqypeCnevpsW1K1q5NpSwjJ9VIzaKV44qPSjaJqTxsstLBMRvTyNEjwb7mllBOHlfdeF2wB9auzPTdwLT14eQ0iHdPPfsaRpSPCCGEdBucFAghhASWrHxEyNJBYKnwnLeMq28Q+yR4LmveeDkbzfvWwaPBfv6Z54K952c7g1076TyLYvuKkZ5lwe4fXB/swWveZe1rLw92z3KTbfKlrPdR5CKayxMWBX368JvBPvXGnmBPnTgWbJ2ypHvjx6391Wd+FuzJMTvme97/zzJ9L7/UEu01YpOoxBUijaKzPbh820KGTwqEEEICnBQIIYQEKB8RshRIlYuMrOF8jmJXVnLalaI8fDRbMfeFnz4b7Nd//nywG8PmkRNF/cEurr002Jde9x6zb7wl2H2XWt2EuOA8jpy8pU11HXLuPPpclr6177412FecPB7sE3tfDvbBF38R7PHDh4JdHTfJ6I2XLeguX8h+Td7yAZOT+lZbkFshKrutnNfWGflIKB8RQi4QEdkqIsdF5BXXtlpEtovInvT3qnMdg5ALgZMCIQuTbwK4u6ntQQBPqOomAE+krwmZUygfEbIAUdWnRWSoqfkeAB9I7UcAPAXg87M4WgheqzVMGvI1EOqx3R+OjZsUtHfX7syR9u4wGUadZJTLmYzSf5l5E135a/9dsFdfOxTsaLl5IsVOChIX1Bb7ALUm5UW8F5Wz47zZpXUmXW1YsdzGt848n17/2T8Fe3yveSvVpi3f0YFXwsMaAGD5msFgb/q1G62/FXYNcmJBfmeUL6F8RAiZY9ap6hEASH9fcp7tCXnHcFIgZBEiIltEZKeI7Dxx4mSnh0O6CMpHhHQPx0RkvaoeEZH1AI7PtKGqPgzgYQDYvPk2c4Vx+XliFwA2WXE5jQ5bgNqBl17NHLd2ygK/VCxPUf+aDcEe+rU7g7386quDPS4mB02ctJxDRXdvurzPAsOKPeaJFDflDZpyOY6GR+0yHHvbgtfq0xZYtnK5rclvWGOy0lW3/Xqw97trMHbgQLArE1amEwAOvGrXZNV6k5L6+k2WKvS4r9Zces0pHxFC5phtAO5L7fsA/KCDYyGLFD4pLGGYKXbhIiLfRrKoPCgihwB8EcBDAL4rIvcDeAvAb3duhGSxwknhHcAvUdIuVPWTM7z1oYs5rvfaqdbN/WhkzPIVHdxrEszxN0xKAgBpmLiQ67fcRKuudV44G0yeOXD6QLB3/coCwt52OZQGXOrsocs2Bvvd19sxi2vWZMZx8NTbwX75xWeCfWK/tee1YHbJvuqu32iS1s03W7rsS260wLfKaQtka5yytNsAMHrc5Kqj+yz4be2lq4Pd21MMtko2/fhCh/IRIYSQACeFFgw9+KPMUwEhhCwVFr18dLFf7pwcyGJCXbW1uqsaNjJicsmJA4eD3Rg3Dx4AiHLmcdS7al2wlw2ZJHO6YUFtL+zeFezj++2461ZcZn1EVjlt7xuvW3vFjnPlLZYrCQDeesskrqmjY8G+8wYLllt+qY3vtcP7gr3vrQPBvvQSG8fghqFgr7j8ymCfOm2V2gCgOmWBbcfefMP2WWc5nw4dt/vtWiO5hlNTdj4LGT4pEEIICXBSIIQQElj08hEhxPB+MFWXInts1ILSxk6MBFuyhdeAUm8wBy6xgLXSWgviGh95K9jFivVx6zWWOvvmW38t2Kfq5vn0y+fMk+jto+bZs2yjeTQBQN15Bw32WGDau95t3kS5Qct3VF9mHk7jRyxwbvK0neuGq68K9oornHy097VM341pk4FGRsyLatdr5nG0d8Ikp4mxpI/hUVeRbgHDJ4U5govThJDFACcFQgghAcpHhCwh6moCUrlm2tDUmMlHU6PmXQPNZfaXkuUmGlhvnjv9y02q6Rm4JtgrV5oHUKFo++b7TYaSEfNwyrn8QJETu3x67KTB3ss5O8qZR1Wct/beXpOPciWzG1XzfIpzdq6lVRYsJz3mcQUAMmnXp1Kx/nKw7eoNk5LqcRpEp8x9RAghpMvgpEAIISRwXvlIRLYC+E0Ax1X1prRtNYDvABgCcADA76jqiCSlhf4GwMcATAH4tKo+n+5zH4A/Tw/7l6r6yNyeyuJkMedbWszntlBRV80sbliq6HLZJJxa3VUNa9q/kLd8Qr0lk0jESS9F5w20utfyIzVgUsvolAWcHTq0N9jDp8ybZ+iyoWCvWp31Pjp5xPIP1Rom5zRi83aKxPqL3DddlLd74YY7V3Hj87mS8iU7ZwCoOTuu2xWqOimpIbZ/Pc0xpWddzYXJbJ4UvonZ14r9DQCb0p8tAL4GhEnkiwDuAHA7gC+y6DghhCw8zjspqOrTAIabmu9BUiMW6e9PuPa/04RnAKxMi4F8FMB2VR1W1REA23H2REMIIaTDXOiawky1YjcAOOi2O5S2zdR+FtkygicucHiEEEIuhLl2SW3lc6XnaD+7MVNGcHN3iHBzDIPgyHwh4t08TQOHS5TnP5nS9DH1d5F5d6zIr1WIc2N17ZWauX++fdSinl/f/XKwVxXNtfVd17/XDtPflxlHrmBfXZNuUI3Yzqnohh5FNqY4Z/tO59z6gtq+BfeVFWnT15D7NmtkXHxtXeb4UYuaPnXyGACgWrX1joXMhT4pHEtlITTVij0E4Aq33eUADp+jnRBCyALiQieFmWrFbgPw+5JwJ4DRVF56HMBdIrIqXWC+K20jhBCygJiNS+o7qRX7GBJ31L1IXFL/AABUdVhEvgxgR7rdl1S1efGaEDLP+HKcOWcXis4F07ls1pykAgBxbA6ZlZrZ/U4mEjWZpFotB/vUyMlg73nlxWCXqibt3HSLJbRbfdn6YI/WsjUNELmyok4ymnZJ/noy0djmPpvLWUQzKjY+rdu+9YpJXfWad0LNok6WqrrrWSnbPvVqIjFpswy1QDnvpPBOasVqctafmeE4WwFsfUejI4QQ0lYY0UwIISTAhHiELCG8ghE5L5yeXpNXSs6uIisfNcqWOG96+JS1u8RyGtk+p8dMJd6/55Vgjx+3iOSbN90e7Muu3GjHdOpPnK0KCi1alHG9OhHsidTTBwD6VponU3nMaiA0KnYw7bFrEDvvqGkndTXKM5fRjPM2yClXfKJadX0EWYkJ8QghF4iIXCEiT4rIbhHZJSKfTdtXi8h2EdmT/mZmADKncFIgZGFSB/DHqnoDgDsBfEZEbsTMKWYImRMoHxGyAElduc9kDRgXkd1IsgDcg8QbEEhSzDwF4POzPq6TMPLO46h3udU6WDZoSezG3zKJCADiiiWfGzv6drBXnLLymI1Vdqw33rYgtX27TT5aU7Bt+vvMPjZsso2OmRxTLGTvX5e5+g2HSiZXPbfLynkOnrAAsqmylcIsnzbpauX1NwW7PmUy0fCbB6yzsslKAKCRjSXXazUUxmvmyVSrl9Gt8EmBkAWOiAwBuBXAs5g5xQwhcwInBUIWMCIyAOB7AD6nqmPn297t53KInTz/DoSkUD4iZIEiIgUkE8K3VPX7afMxEVmvqkeaUsxkyOYQuy34HPlyl8WcefCsWGXr1QOXWgnNuMfkHwDAhEksE8cPBXtkv9VEiIfMg+hX+/YF+/ARq5Uw4YLJjp2yXF++JGb/gOU7uu3mWzPD2HT11cEWF2j2wovPB/vo65ZTaXWPHeuay23fDVdcZWM6YmMdfftAsLXeFMDnynlKj0lfoyMmodVqLsdUcPnqjuA1PikQsgBJC1Z9A8BuVf2Ke2umFDOEzAl8Umgji7nS2GI+tw7xfgCfAvCyiLyQtv0pZk4xQ8icwEmBkAWIqv4EM0c7nZViZrY0Gi49tJOSVi9fFux1Q5bQ+OClJqkAwOQb5tFTGbe1ihO7LZfRJf0mr1w3aGU017zHgtRysG1KrqxnsWDtfQPmYXTJBpOkAGBwla2vr161JtjXXHOjjXXclmD6XJrvFSXzGBo9YR5UR3eZ9FQ5bbmWoqhJUFlhktFYzq7nxIgF6mnD+hNh8BohhJAuhZMCIYSQAOUjMu+cWW/gWsMCwElGOSeLLOsx2WbDxsuCffi6azO7vzFsskpjxALZpo+Zl9LIKybPXH/LHcHu3dS6kprkXQU35xElOZOVCrns/WuUt/MQmMfSujWrbXzLe4NdH7f8SKedZ9GBZ/9bsKfetorBThVCo7c/03el37yz3hqxXEuVqSm3VetKdt0AnxQIIYQEOCkQQggJUD7qIAtJVqFL6dJAnJYhrmpYsWhyzCWDJsFc+54bMvtPnLRcSMd2WcBa3QW1jbz1erBjl0L6sndbANrqa02WKqyyXEtRwSSj2I0v74uoARDnTaSx5Uiq+9TezrNo5MCeYL+9y4LaJg9bQB3qTufpMempdKlVgAOAiZINZmLMPJxiVwGudZW17tCR+KRACCEkwEmBEEJIgPIROS8LSeYiF0ckvpyZyR05J9Us6zV76CoLZAOAibFbgl2tWqH7k6/vt8NOmoQzcdBkm/2nzVNn+C077porTUrqHVwb7MKABdRFTfpRrW6yVHXCJJyJYyYZnXzTAu8mjlrQXX3M0miLujTYLoX3wGUbgt1z5eWZvqdcUFyuqTJdK7pDNDL4pLAEGHrwR5k1A0IImQlOCoQQQgKUjwhZQoj3ipnBLojdK64esKA2ALjuxk3Bjt12rxcs6Ozka+aVpOPmlVQfs9xAJ3ePBPv0PpOY8n0W1BY5DyDJZ7+qGg2TruplCxprTJl01ahU3PbO6ypnxyq6Cm6DQ0NmX2t2uZSVrkbUjuuD6DK4a2PXtjtyH3FSIBcMJSlCFh+cFFI6vZi6VL5gl8p5EtKtcE2BEEJIgE8Ki5BujU7u9NPaUiDOma7dcEnmIpcoDy5CuCefvW9cv9rcREs3vyvYfa505p4Vts2J198IdvmkrSNg2nT5esXWBKpufUCcLh+VbH0hedPMWtXWEbThEuX5iGiXgK9vtUVsb7jG6jRcc5OdT/+lg8F+a/hEpuu3nWttrujG6NxmIzeOM0kIRbpjTYFPCl0MXU15DQiZazgpEEIICVA+WiQslbvlbpXGFgrqk7a50pzImfSRlTmyEbtFJ5EMrrQ6A8tusqjk9ZeYPLP32quCfWL/m8E+/dbxYE8Ojwa75mQln7wvGliRPQ8XiYxpq9+Qy5tr7MDqVcFetd7Kd156tUUo33CN2cvX2vbjTp86UfF1EoC162yfWza7xHxlk91KkY0jSt1p//FH3fEZ5aSwxLhY3X6pTD6ELFU4KZCWzNXk0c67ed8nnygIuTA4KRCyhNDY5A6f/1+8O49LmpeTbDq3WH1ksG3XW7T2qzesCfZlgyb7TLzbJKZDx6ys55HjJ4M9PmLJ6sZGxlpuAwCTEyYzac76WNZjstLG664J9vtue3ewV11q2/f0W/2GauSugUv214hsGwBYvtw8k26/1WSpkpOuSkWLBI/S9p88/TS6ga6dFJaqjLFU3DaXynnOhIj0AHgaQAnJ5/QfVPWLInIVgEcBrAbwPIBPqWq1cyMliw16HxGyMKkA+KCq3gLgvQDuFpE7AfwVgL9W1U0ARgDc38ExkkVI1z4pELKY0aSe40T6spD+KIAPAvjdtP0RAH8B4GuzPq6Tj7wylLF9qcum/TPyUUZ+cjgZpq/PpJfeHpNUVroguGuvWRfssUnz9Hltn9VG2PkjC4IDgMOHLYBMGiZjrV9uHlE3uFvenhVWKyFfsjGJC+bztRF8nrv+YjYhXjRggXTFgp2Tl4wKResjyiXyUT7XVFN0gcInBUIWKCKSE5EXABwHsB3APgCnVfWM4H0IwIaZ9ifkQuCkQMgCRVUbqvpeAJcDuB3ADa02a7WviGwRkZ0isvPEiZOtNiGkJW2Xj0TkbgB/AyAH4Ouq+lC7x0BIN6Gqp0XkKQB3AlgpIvn0aeFyAIdn2OdhAA8DwObNt4WJQ+HlH9veS0YiFoTVPOOoOl3F5xlyeZS8V5NPAeTvQHORveopmteO5EyCWbbKgtKiKCu91LXQ8r1yw9rHK+Vgj01PBLtnwHlXOfkncrJXURvOzgbw1dzryNV10Kq7Bi4wUKPED8AHDi5k2vqkICI5AF8F8BsAbgTwSRG5sZ1jIKQbEJG1IrIytXsBfBjAbgBPAvitdLP7APygMyMki5V2y0e3A9irqvtTN7pHAdzT5jEQ0g2sB/CkiLwEYAeA7ar6QwCfB/BHIrIXwBoA3+jgGMkiRFRbSpLz05nIbwG4W1X/p/T1pwDcoaoPuG22ANiSvrwOwGvnOewggE6Kpku9/4Uwhovp/0pVXTuXg1loiMgJAJPo/P9JJ+j0/6anK/7X2r2m0CqheGZW8lrorA4oslNVN1/swC6Upd7/QhhDp/tf6Kjq2qV6jZbqeV8M7ZaPDgG4wr2ecaGMEEJI+2n3pLADwCYRuUpEigDuBbCtzWMghBAyA22Vj1S1LiIPAHgciUvqVlXddZGHnbXUNE8s9f6Bzo+h0/13A0v1Gi3V875g2rrQTAghZGHDiGZCCCEBTgqEEEICXTspiMjdIvKaiOwVkQfb1OdWETkuIq+4ttUisl1E9qS/V53rGBfZ/xUi8qSI7BaRXSLy2XaOQUR6ROQXIvJi2v+/S9uvEpFn0/6/kzoRzBtporhfisgPO9F/t9GJz0q76fRnYzHRlZNCB9NlfBPA3U1tDwJ4Is1v/0T6er6oA/hjVb0BSR6cz6Tn3a4xLJQc/59FkvLhDKwxMANLKLVMpz8bi4aunBTQoXQZqvo0gOGm5nuQ5LVH+vsT89j/EVV9PrXHkXwxbmjXGDRhphz//zDf/QOAiFwO4F8C+Hr6WtrZfxeyJFLLdPqzsZjo1klhA4CD7nUn88qvU9UjQPKPCeCS82w/J4jIEIBbATzbzjEsgBz//weA/w0IFVHWtLn/bmMhfVbaQqc+G4uFbp0UzpsuYzEjIgMAvgfgc6o6dr7t55KLyfF/sYjIbwI4rqrP+eZ29d+lLKnr08nPxmKhWyeFhZQu45iIrAeA9Pfx+exMRApI/um/parf78QYgCTHP4Cn4HL8p2/N59/i/QA+LiIHkMggH0Ty5NCu/ruRhfRZmVcWymej2+nWSWEhpcvYhiSvPTDP+e1T/fwbAHar6lfaPYZO5/hX1T9R1ctVdQjJ3/zHqvo/tqv/LmUhfVbmjU5/NhYVqtqVPwA+BuB1JJr2n7Wpz28DOAKghuQO7H4kmvYTAPakv1fPY///HMmj/0sAXkh/PtauMQC4GcAv0/5fAfCFtP1qAL8AsBfA3wMoteFv8QEAP+xU/93004nPSgfOsaOfjcX0wzQXhCCJQQFwZs3iphbvC5Iysh8DMAXg05p6u4jIfQD+PN30L1X1keb9CekWulU+ImSu+SbOjkHx/AaATenPFgBfA5LgKABfBHAHkoX3LzJAinQzi3ZSWApRnGTu0NYxKJ57APydJjyDZHF7PYCPIimVOayqI0jcdM81uRCyoFmUk8ISiuIk7WMmf/8lFwdAFjftLsfZLkIUJwCIyJkozldn2mFwcFA3XnklACCSVq7dM9O8LNNoNII9OjYa7Ciy405NTgW7Wi67vVv3Lc61vNGIgx27zpv3lChytv2p8/lC620ye7dea/Lnqudyd49tjH68vj9/PSwWDThx8sRJXXi1bGfy9591HICvP97f33/b9ddfP3ejI8Tx3HPPXfBnaLFOCq3u3u441w4br7wSP/npTwEAvT09oX0200O9ln09OjIS7B/+f/8Y7P5luWC/sOOXwd7/6p5gR+oe3tzklFObaCbHJ4I9VbXOc7nsaIul3mAX+lcHe/Wgua339Nq55jLfZa0nnrr/sne2uvEBgLqJ7vTYuI2jdyDYfSU3UYlt/5+//tU3sfCYyd//EBJPKN/+VKsDqKs/vnnzZt25c+d8jJMQiMgFf4YWpXyEWd69icgWEdkpIjtPnjjRhmGRLmYbgN+XhDsBjGqSNuFxAHeJyKp0gfmutI2QrmSxPinMKorT37ndfNttejINil3ntinN1IPaXfKpo8cyb01O2QQzOn002CcnbJ/jh2049elqsGsVu/MvN+rBFjU776byYsmyRBfydtcPAFHOnkwyjzPuuOru9mMv57gpNI71vHZ09pRr43XjyChzsTvXygg6iYh8G8kd/6CIHELiUVQAAFX9LwAeQ+KOuheJS+ofpO8Ni8iXkQSJAcCXVPVcC9aELGgW66QQojgBvI0kivN3OzskspBR1U+e530F8JkZ3tsKYOt8jIuQdrMoJwVVrYvIA0ge43MAtqrqrg4PixBCFjyLclIAAFV9DMkj/6yo1hs4NJx4Cg2uX3P+48eTwa6Vf5l57/gbVv+lICeDfXrE5JLehu1/un7axmFKEsTJQYVCn9lOFYrEdJtcZFIQkPVYQuwkIycfZRaLneQj2nrR2XscqZOPmheavfdRJJFrdn03/D6MrCdkIbBYF5oJIYRcAJwUCCGEBBatfPROUQVqtdlLGL42/LHD05n3KmN2nFLNZJQ7HgoRAAAanElEQVRCxaST64cuDXZ16pQ7sGlDsfggMxez4PrKxz6arEnCiXLOtP29hBPHtk/kAtxiWLs6mSejKqm2bgcgToqKcq1jLxp1uzbF/DIQQjoPnxQIIYQEOCkQQggJUD5KEQCiEuzzUY9NmqlLthb4shV2hPpBk4aqUyaX5C+ztBP5ZZaOAhMubUW1EuzlPSZX9buAtbFJk67iyNqT1zbGYsH+1D6dRc7JPv4OIXbbZPIraeurEze1i/M4yued4JX34zB5LEKT9EUI6Qh8UiCEEBLgpEAIISRA+egMqojqSeTYbOSjyrQFn02MHc+8d/ywJWg9cdzknVEXvDY1afmShoctYk0bLmeQz0WU8RiyjKLVqh1fZDAzDu/1EzsPInFeSpELTGvUnYTj5B+f58kHpYmPjTsrfbjbx8lPkfPGqsUmj1WmO5v7iBCSwCcFQgghAU4KhBBCApwUCCGEBLimkKINRW080bhjX0nNvCYz9QNOH7aU+W+/8UbmWK8ceivYI4dsvWF1z4pg95RtjaBY81HMbh3AuYVO1G37kUlbz6iWbbB5l2QvedNFQbvo6Bjmuqo5V3nNVWrzCyu+5oJfX8isvTRXXlNbJ2mUrSRpxZUhnXTrMlNTYyCEdB4+KRBCCAlwUiAEgIjcLSKvicheEXmwxft/LSIvpD+vi8hp917DvbetvSMnZG6hfJRSKVfwxqtJresNxVWhfc1Kc/kcGTb71Z+/Guw9r+3LHOvgSZOMGtMmq6zrtyjmFU4aWp43OadaNjfNcWdXndQiLold7KSdctkl1gMyyedykclH5SnnGjtlMk/fKnNp7eu3+g0irZPuNeq2b2UyK11NTlqNiKlxqylRKZs7bZxJqDcbR+D5QURyAL4K4CNISrnuEJFtqhr+yKr6b932/wbAre4Q06r63naNl5D5hE8KhAC3A9irqvs1WQx5FMA959j+kwC+3ZaREdJmOCkQAmwAcNC9PpS2nYWIXAngKgA/ds09IrJTRJ4RkU/M3zAJmX8oH6XUKlM4tO95AMDTJ00OWtbvksGJeeqMHLGI5PHRbD2FXMPkoIaTiSp1u9zTdZOGpiYngj16ejzYZedxhIb3+jGpRZ1EJM0lLZ23VN31V62ZzFSuWH8TE9Y+eIl9J5b6zCupUjXvofKUeWBNjmXlo5qrK+rrN3iZyNdg0M7en7TSrmYqrnEvgH/QbP3Rjap6WESuBvBjEXlZVfc17ygiWwBsAYCNGzde7JgJmRf4pEBI8mRwhXt9OYDDM2x7L5qkI1U9nP7eD+ApZNcb/HYPq+pmVd28du3aix0zIfMCJwVCgB0ANonIVZKU1LsXwFleRCJyHYBVAH7u2laJSCm1BwG8H8CrzfsS0i1QPkqplMs48PqvAABHe0qhvbfPAssG15h3TqnqPIBcWUkAKNa8d5CpEEdOmuR0cNISwE2MWnBXvW7b5119hKhoY8o7WyKb15vlo7hhsk29bh5H9bKTu1zNhlrD5KNTNZN/Sn1WKrPmEujVGiY9oZHtOxd5Wcuuoddcck4/asSdq6egqnUReQDA40iqnW5V1V0i8iUAO1X1zATxSQCPqmaKj94A4G9FJEZyk/WQ91oipNvo6klBRLYC+E0Ax1X1prRtNYDvABgCcADA76gqU3CSc6KqjwF4rKntC02v/6LFfj8D8J55HRwhbaTb5aNvAri7qe1BAE+o6iYAT6SvCSGEzIKuflJQ1adFZKip+R4AH0jtR5As/H1+NseT1MNHndyhkXnejLhSmTJhXjiVJuWj6moX+DoI42MuB9CE5frxpSzzPRY0Vugx2aZY6re+XUlLL1yJZiUcUevbyzN1F0BWnXTSlavNUJ6y4LO6k4byzhNpoG/A9ZXpOuPOEzvPqdgllvIqzPT0FAghnafbnxRasU5VjwBA+vuSmTYUkS2pf/nOsvuiJISQpcpinBRmjXcR7OnpOf8OhBCyyOlq+WgGjonIelU9IiLrARw/7x4AoIpG6nFTKFmeoA0bhoLdqJqEM+k8byTnvHAANOACxaZMkqlNu9KZTvcp9JgkUxqwvEu5gnkZ6QwptWMXvBY1pa/2clLDzf85J1EVxaQyTJhkVCmbvFWrWHBdvse27ymttGO6wwCAOs+nmvNkqlWsveo8ohpx1oOLENIZFuOTwjYA96X2fQB+0MGxEEJIV9HVk4KIfBtJINF1InJIRO4H8BCAj4jIHiRZLx/q5BgJIaSb6Gr5SFU/OcNbH3qnx4rjGNOVZLG54JSMwbVXB7tx0nL9aMEWpguF7NyqsZNLpk1aiqvOe8mlyy6UzIunVjeJaWraZJu6Wh+lXpN/fCBblCkZB5Td/tM1J+c0THLqddXWCk5WytXMG6juUmRXnQQ2VTb5qH9ldk0mErs+k6MWJjI9ZcetuaA/1a6+PyFk0cBPIiGEkAAnBUIIIYGulo/mklgVldQbZuyUed4cP2zSR7FxItgnT+8Odq2WTZ2NqqWRrlbsWHWXBylfWG5951xVNLd9IyOv2DZTYybn9A+Y9BQ35T6aLk+692z+j9RchcqTJm/lXGBawQWmVcctwK027TyGqiZD9RXtfACgr2DjnVC7bqNV5xHlJCOdKVE1IaSt8EmBEEJIgJMCIYSQAOWjlEgEhULiEdRwwVqH334l2HHNgrtOD1uaaa1mA68avuqYS6MNsctdKBVds8k5eTUZprfHJBhfRW1i3CStmstXlMtl/5xxbH30DlgepbwLeBsftXOarpk01O88kaLI+tC6y6FUsyA9kWz0WkGs75y/93BJkTI5kYT3J4QsBPhJJIQQEuCkQAghJED5KEUBxGfSS+dtrjx87M1gF2ABYPBeNGWTiwCg6iQW8TmHxNu2fZRzgWmR5VeCyw1UdUFtdafBFHx+pEY295HGriqbr+IWOa8mN45GzqcMt3+NvKvuVnPXoFK1ALWKy3UEALXIn6D1XczbeGOx8UYdvj8RkbsB/A2SymtfV9WHmt7/NID/CODttOk/q+rX0/fuA/DnaftfquojbRk0IfMAJwWy5JFkQeSrSNKiHAKwQ0S2tSir+R1VfaBp39UAvghgM5J7i+fSfVntj3QllI8IAW4HsFdV96tqFcCjSIo1zYaPAtiuqsPpRLAdZ1cDJKRr4JNCisYxKpXEmybnPH20arKIOEnE5+qJkfW8iTPvuapqTp4RJ8n4KmVedam4oLjpsgWZNWLzSoqdR5PGTfKRCwiL1UlGaDjbpeH2wW/eG8h5K/ntfTW3RlPfsTs/jUwyKrgUST69dhx3NHptA4CD7vUhAHe02O5/EJF/AeB1AP9WVQ/OsO+GVp2IyBYAWwBg48aNczBsQuYePikQkp2Xz9A8S/2/AIZU9WYA/4Sk1Ots900aXVGntWvXXvBgCZlPOCkQktzdX+FeXw7gsN9AVU+p6pnAjP8TwG2z3ZeQboKTAiHADgCbROQqESkCuBdJsaZAWsXvDB8HcCb51eMA7hKRVSKyCsBdaRshXQnXFFJUFY0zNQdiV+LS+Y7GroZmzQn22qSHx+49b1drtn/OJbsrmeQOP08Xi+ae6tcwai6JXaViSe96ck11HfzagXrbjd0pHZl2vwbhbK+VZNcjsiqKL//pS4aKS5TXU/QR250rx6mqdRF5AMmXeQ7AVlXdJSJfArBTVbcB+F9F5OMA6gCGAXw63XdYRL6MZGIBgC+p6vBZnRDSJXBSIASAqj4G4LGmti84+08A/MkM+24FsHVeB0hIm6B8RAghJMAnBceZiOBGJlGbvd9wU6g6KclHDgNNkgzcsZzbZuyij+t1c82s1q1cZcElmcu7ZHeRk4IarlRmnLckdgAQ51wfVUvy50t4er/VyDvNNOy4kRtrzktBPgJam6+Bveflo8iVIe118pG08uEhhLQdPikQQggJcFIghBASoHx0BtUQEez9YMR51XgHmdhJOFFTLQEfuZwvmF2rmExUL1u0chTZNtWqleMsuzm70bBt6k7m6StZiHA+yv45c2L9TbukfZPTlsjO10HodeOulU1uqjcsMZ9PlNfnZKhc0/1F5EqM+vMrOBmsv2jlP6V1vBchpM109ZOCiFwhIk+KyG4R2SUin03bV4vIdhHZk/5e1emxEkJIN9DVkwISn/E/VtUbANwJ4DMiciOABwE8oaqbADyRviaEEHIeulo+UtUjAI6k9riI7EaSjOweAB9IN3sEwFMAPn/OY0HRiGtntYtPBufkI58ALhdlpQ9xEkuUc/URYNJQXLWgM5RMainmzIOo7HLM+WoFpT7bpug8ePJNHjzSuyLY01UrndmIfYCcyU8Fd/6Vislbsdj55Yq2b1R01yDXdA38dXPykd9OY/O0qlWzCfUIIZ2h258UAiIyBOBWAM8CWJdOGGcmjktm2GeLiOwUkZ212tkTAiGELDUWxaQgIgMAvgfgc6o6dr7tz+CzVhZc+gVCCFmqdLV8BAAiUkAyIXxLVb+fNh8TkfWqeiRNZHb8fMdRKGqpJORnyoxnkQv08kpNo9Esfdi7OV8u0+VRqtWdnONyGfUM2Jp4b6/JRL2ubkLO6UTipB3R7DjyThrqL7hynL7OQs28kmqufoO4Wgd5L/8U7Ti5gjtQ0+2Fr6dQc25b01Xrb8JJVKKMXiNkIdDVTwqSCNffALBbVb/i3toG4L7Uvg/AD9o9NkII6Ua6/Unh/QA+BeBlEXkhbftTAA8B+K6I3A/gLQC/3aHxEUJIV9HVk4Kq/gStK18BwIfe2cEEUSphRE76iJxs03A+QJlwtSj7wOXz+ER5e69nwOSg6TGTjOoVCyabjk8Fu9hn/RVKA9a3927y+ZjQjJeWTMKpTzuvn/JosOPMYrv1kXcpvHtKFnCWl0w0X6Zn8eU8nV7l0jwhH5kUJehc6mxCiNHV8hEhhJC5hZMCIQBE5G4ReU1E9orIWcGOIvJHIvKqiLwkIk+IyJXuvYaIvJD+bGvel5Buoqvlo7lEBIhSySPy0od4WURa2lFT3mfnpIS6s3MFk4CK/dZHdcK8aBtlk5LKNZdSO2+5iIol50mUGVJ2HHXn9aPOm6hWMc8ngUlGOSfnFHpM6urpt/ZiwY4ZuWvgvZWSDu3E807j8qm3cy4PUrPnVDuRJAHUVwF8BEnN5R0isk1VX3Wb/RLAZlWdEpE/BPAfAPyr9L1pVX1vWwdNyDzBJwVCgNsB7FXV/apaBfAokqj4gKo+qapnFmOeAXB5m8dISFvgpEBIkhrloHt9KG2bifsB/Ff3uieNjH9GRD4xHwMkpF1QPnJIdLZ8VKubvNJw3jyRSzPd5HjTlHrb8J43vgJZccBkpfq0S1PtAsvU5Ury1dmic8zrvuqbZlQwJ9uUlgc75ySj3n6fktvkpiiykxCcQ/5xnkl5530UuRxMdXfhajVr7wCtPNha5vIWkd8DsBnAr7vmjap6WESuBvBjEXlZVfe12HcLgC0AsHHjxosfNSHzAJ8UCEmeDK5wry8HcLh5IxH5MIA/A/BxVQ2zmKoeTn/vR5J88dZWnfi0KmvXrp270RMyh3BSIATYAWCTiFwlIkUA9yKJig+IyK0A/hbJhHDcta8SkVJqDyIJqPQL1IR0FZSPUqIoh4H+JEirXjYpIysNuSpsXi2RbOBV1l9JZnjH7J4BS3G9cpUFitWnLLBsevp0sMsVk5XqbhzalD8o7yLscq4SWqm0Mti9y9YFe/lqk5K0cTLYtcz1cF5X0UxeWsjcbmhsktPU+Igb+wzyVptR1bqIPADgcSRxiVtVdZeIfAnATlXdBuA/AhgA8PdpWvC3VPXjAG4A8LciEiM564eavJYI6So4KRACQFUfA/BYU9sXnP3hGfb7GYD3zO/oCGkflI8IIYQE+KSQkstFWLY88QKahmkytar3ivFyiQvcirKyTeykoUbcOj+QV5+qan+GtWtsvbN3zWCwTwy/afuOWiBb7KLjpCkHUz7vAsjy1kfBp9ReZp5PAyuWBbsybQF19aoLPnN9iPdianLgUZ93yb0VOxesRuy3YepsQhYCfFIghBAS4KRACCEkwEmBEEJIgGsKKQ2NMZrWNVBfV8CvF7iylIXIu2Y2HcsnonPumJrZxtUYcG80XHfqynzWp610ZXXSIpr9kkUulx1IrtfcUHMlswsFV17TlfbMFInwSQGdG2o+Ftfs1wGyfat7nXe+sdEMiQSVawqELAj4pEAIISTASYEQQkiA8lGKSIRiT+KqWZk0N1Tv1tnIBCc73UYyxTkzsojfJfb7uGR1UWw1FE4d3RPsE6MW/Ts5ZeU7KzXb1x8xaooqbtRtzm94SUxNSir2mUSVkb3UuZ7GznanKu5F3PSvpM5dNVM+NHNtWrv4EkI6B58UCCGEBDgpEEIICVA+SqnXajh59AgAIFczSaW3VAp23vkPxc77KG6K5o2cl1LO2bFLAOeVnvqkq5VQGbY3qq62gktoly+aXXeZ5CTO1jRouBoF1YZ5L2lsyfVyxTXB7lluifl8hLK0Li2QlZKaXbCc91LOex+564EG5SNCFhpd/aQgIj0i8gsReVFEdonIv0vbrxKRZ0Vkj4h8J02HTAgh5Dx09aQAoALgg6p6C4D3ArhbRO4E8FcA/lpVNwEYQVI+kRBCyHnoavlIVRXAmexwhfRHAXwQwO+m7Y8A+AsAXzvnsRp1lIcT6SbyAWux1TcoFUy2iYr28BE31ePMBmI52weEeUmmYt5H6myfcA6R9S0uoV3O11CoN5W0dHUX1CWiq09b8Ft5zDycqmuszkIpl/WoCsNw10Z95JwrWwpkpbZCzstHTpbyHk5R6/4IIe2l258UICI5EXkBwHEA2wHsA3BaVc98C85YhF1EtqQF13fW6o1WmxBCyJKi6ycFVW2o6nuR1NW9HUklrLM2m2HfUDO3kOed6lJHRO4WkddEZK+IPNji/VK6RrU3XbMacu/9Sdr+moh8tJ3jJmQu6Wr5yKOqp0XkKQB3AlgpIvn0aaFlEfazEUTpHOkDvapikoz3GIp8WcpmqcWrT77OpPcUcoFscb3qtrGd634ui20c2rA/W81JV7laVj6KfB8+0Mw9FdUr5onUqFn5zygyecx7H3nvIZ/fKEK2JCnU5Koocvu7TbKpkzrrfSRJJN5XAXwEydPlDhHZ1lRa834AI6p6rYjci2Tt6l+JyI1I6jq/G8BlAP5JRN6lqnz8JF1HVz8piMhaEVmZ2r0APgxgN4AnAfxWutl9AH7QmRGSLuJ2AHtVdb+qVgE8CuCepm3uQbJGBQD/AOBDklQHugfAo6paUdU3AOxNj0dI19HVkwKA9QCeFJGXAOwAsF1Vfwjg8wD+SET2AlgD4BsdHCPpDjYAOOhet1qLCtukT6GjSP6/ZrMvIV1BV8tHqvoSgFtbtO/HO7xTmyxPn/z57pfeBDAI4OTcjLBrSM75hR2dHscZruxAn630q+a1qJm2mc2+EJEtALakLysi8so7GuHc0Mn/7071vRTP+boL3bGrJ4W5RFXXAoCI7FTVzZ0eTztZiufcgkMArnCvW61FndnmkCT+wisADM9yX6jqwwAeBjp3zTv5t+Y5t7ffC9232+UjQuaKHQA2pdHwRSQLx9uattmGZI0KSNasfpzGymwDcG/qnXQVgE0AftGmcRMyp/BJgRAkawQi8gCAx5HUoNuqqrtE5EsAdqrqNiRrU/9XulY1jGTiQLrddwG8CqAO4DP0PCLdCieFs3m40wPoAEvxnM9CVR8D8FhT2xecXQbw2zPs++8B/Pt30F2nrnkn/9Y85y7oV1RbZ8AkhBCy9OCaAiGEkAAnhZTzpThYLIjIFSLypIjsTtONfzZtXy0i29N049tFZFWnx7oYuJjUGfPc7x+JyKsi8pKIPCEic+YGPNvPkoj8loioiMyJd85s+hWR30nPe5eI/N/t6FdENqafuV+m1/tjc9TvVhE5PpNrsyT8p3RcL4nI+2Z1YFVd8j9IFhb3AbgaQBHAiwBu7PS45ulc1wN4X2ovA/A6gBsB/AcAD6btDwL4q06Ptdt/ZvN/BeB/AfBfUvteAN9pU7//PYC+1P7Dueh3tn27/72nATwDYHObznkTgF8CWJW+vqRN/T4M4A9T+0YAB+boWv8LAO8D8MoM738MwH9FEkdzJ4BnZ3NcPikkzCbFwaJAVY+o6vOpPY4kLcgGZFM4PALgE50Z4aLiYlJnzGu/qvqkqp7Jof4MktiKuWC2n6UvI7kRKbd4b776/Z8BfFVVRwBAVY+3qV8FsDy1V2BWudjOj6o+jcQLbibuAfB3mvAMkpxw6893XE4KCUsyTUEqVdwK4FkA61T1CJBMHAAu6dzIFg0Xkzpjvvv13I/kjnIuOG/fInIrgCs0SUkzV8zmnN8F4F0i8lMReUZE7m5Tv38B4PdE5BAS77Z/Mwf9zoYL+l6jS2rCrNIULCZEZADA9wB8TlXHLv7mlLTgYlJnzHe/yYYivwdgM4Bfv8g+Z9W3iEQA/hrAp+eov1n1m5JHIiF9AMmT0X8TkZtU9XTzjnPc7ycBfFNV/3cR+WdIYl1uUtW4xb5zyQX9b/FJIWFWaQoWCyJSQDIhfEtVv582HzvzaJn+notH66XOO0mdgabUGfPdL0TkwwD+DMDHVbXS/P489b0MwE0AnhKRA0i07m1zsNg822v9A1WtaZLN9jUkk8R893s/gO8CgKr+HEAPkpxI880Ffa9xUkiYTYqDRUGqV38DwG5V/Yp7y6dwYLrxueFiUmfMa7+phPO3SCaEubwBOGffqjqqqoOqOqSqQ0jWMz6uqhecq2c2/ab8P0gW2CEig0jkpP1t6PctAB9K+70ByaRw4iL7nQ3bAPx+6oV0J4DRMxLxOZmLVfDF8INkpf51JJ4Ef9bp8czjef5zJI+QLwF4If35GBId+wkAe9Lfqzs91sXw0+r/CsCXkHwRAskXxN8jqcHwCwBXt6nffwJwzP0PbGvXOTdt+xTmwPtolucsAL6CJB3JywDubVO/NwL4KRLPpBcA3DVH/X4bwBEANSRPBfcD+NcA/rU736+m43p5tteZEc2EEEIClI8IIYQEOCkQQggJcFIghBAS4KRACCEkwEmBEEJIgJMCIYSQACcFQgghAU4KhBBCAv8/aO9JhyfA0DoAAAAASUVORK5CYII=\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7fa0765e70b8>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "### Data exploration visualization code goes here.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "import matplotlib.pyplot as plt\n",
+    "# Visualizations will be shown in the notebook.\n",
+    "f, axarr = plt.subplots(2,2)\n",
+    "\n",
+    "# count of each traffic sign in training data set\n",
+    "unique, counts = np.unique(y_train, return_counts=True)\n",
+    "axarr[0,0].bar(unique, counts)\n",
+    "\n",
+    "top_5_idx = np.argsort(counts)[-5:]\n",
+    "top_5_signs = [unique[i] for i in top_5_idx]\n",
+    "print(\"5 Sign with highest Samples: \", top_5_signs)\n",
+    "\n",
+    "bottom_5_idx = np.argsort(counts)[0:4]\n",
+    "bottom_5_signs = [unique[i] for i in bottom_5_idx]\n",
+    "print(\"5 Sign with lowest Samples: \", bottom_5_signs)\n",
+    "\n",
+    "# plt.ylabel('Counts')\n",
+    "# plt.xlabel('Sign')\n",
+    "\n",
+    "# show image of one of the least occuring sign and one most occuring sign\n",
+    "idx_least_occur_image = np.where(y_train==0)\n",
+    "idx_most_occur_image = np.where(y_train==1)\n",
+    "img_sign_least_count = X_train[idx_least_occur_image[0][0]]\n",
+    "axarr[0,1].imshow(img_sign_least_count)\n",
+    "#print(idx_most_occur_image[0])\n",
+    "img_sign_max_count = X_train[idx_most_occur_image[0][6]]\n",
+    "axarr[1,0].imshow(img_sign_max_count)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "----\n",
+    "\n",
+    "## Step 2: Design and Test a Model Architecture\n",
+    "\n",
+    "Design and implement a deep learning model that learns to recognize traffic signs. Train and test your model on the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).\n",
+    "\n",
+    "The LeNet-5 implementation shown in the [classroom](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) at the end of the CNN lesson is a solid starting point. You'll have to change the number of classes and possibly the preprocessing, but aside from that it's plug and play! \n",
+    "\n",
+    "With the LeNet-5 solution from the lecture, you should expect a validation set accuracy of about 0.89. To meet specifications, the validation set accuracy will need to be at least 0.93. It is possible to get an even higher accuracy, but 0.93 is the minimum for a successful project submission. \n",
+    "\n",
+    "There are various aspects to consider when thinking about this problem:\n",
+    "\n",
+    "- Neural network architecture (is the network over or underfitting?)\n",
+    "- Play around preprocessing techniques (normalization, rgb to grayscale, etc)\n",
+    "- Number of examples per label (some have more than others).\n",
+    "- Generate fake data.\n",
+    "\n",
+    "Here is an example of a [published baseline model on this problem](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf). It's not required to be familiar with the approach used in the paper but, it's good practice to try to read papers like these."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Pre-process the Data Set (normalization, grayscale, etc.)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Minimally, the image data should be normalized so that the data has mean zero and equal variance. For image data, `(pixel - 128)/ 128` is a quick way to approximately normalize the data and can be used in this project. \n",
+    "\n",
+    "Other pre-processing steps are optional. You can try different techniques to see if it improves performance. \n",
+    "\n",
+    "Use the code cell (or multiple code cells, if necessary) to implement the first step of your project."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "PreProcessing Done\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Preprocess the data here. It is required to normalize the data. Other preprocessing steps could include \n",
+    "### converting to grayscale, etc.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "from skimage import color\n",
+    "import matplotlib.pyplot as plt\n",
+    "from sklearn.utils import shuffle\n",
+    "\n",
+    "X_train, y_train = shuffle(X_train, y_train)\n",
+    "X_test, y_test = shuffle(X_test, y_test)\n",
+    "\n",
+    "X_train = X_train.astype(\"float32\")\n",
+    "X_valid = X_valid.astype(\"float32\")\n",
+    "X_test = X_test.astype(\"float32\")\n",
+    "\n",
+    "# Normalize Data\n",
+    "def normalize(data):\n",
+    "    return (data - 128)/128\n",
+    "\n",
+    "\n",
+    "# grayscale data\n",
+    "X_train = color.rgb2gray(X_train)\n",
+    "X_valid = color.rgb2gray(X_valid)\n",
+    "X_test = color.rgb2gray(X_test)\n",
+    "\n",
+    "# some debug information\n",
+    "# img = X_train[0].squeeze()\n",
+    "# plt.figure(figsize=(1,1))\n",
+    "# plt.imshow(img, cmap=\"gray\")\n",
+    "# print(X_train.shape)\n",
+    "# print(X_valid.shape)\n",
+    "\n",
+    "# now reshape them\n",
+    "X_train_processed = np.reshape(X_train,(len(X_train),32,32,1))\n",
+    "X_valid_processed = np.reshape(X_valid,(len(X_valid),32,32,1))\n",
+    "X_test_processed = np.reshape(X_test,(len(X_test),32,32,1))\n",
+    "# some debug information to confirm matrix reshape\n",
+    "# print(X_train_processed.shape)\n",
+    "# print(X_valid_processed.shape)\n",
+    "# img = X_train_processed[0].squeeze()\n",
+    "# plt.figure(figsize=(1,1))\n",
+    "# plt.imshow(img, cmap=\"gray\")\n",
+    "\n",
+    "X_train_processed = normalize(X_train_processed)\n",
+    "X_valid_processed = normalize(X_valid_processed)\n",
+    "X_test_processed = normalize(X_test_processed)\n",
+    "\n",
+    "# print(X_train_processed.shape)\n",
+    "# print(X_valid_processed.shape)\n",
+    "print(\"PreProcessing Done\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Model Architecture"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hyper Parameter Set\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Define your architecture here.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "# Tunebale parameters\n",
+    "import tensorflow as tf\n",
+    "\n",
+    "EPOCHS = 11\n",
+    "BATCH_SIZE = 128\n",
+    "input_channel = 1\n",
+    "print(\"Hyper Parameter Set\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from tensorflow.contrib.layers import flatten\n",
+    "\n",
+    "def LeNet(x):    \n",
+    "    # Arguments used for tf.truncated_normal, randomly defines variables for the weights and biases for each layer\n",
+    "    mu = 0\n",
+    "    sigma = 0.1\n",
+    "\n",
+    "    # Layer 1: Convolutional. Input = 32x32x input_channel. Output = 28x28x6.\n",
+    "    # for this filter size = 5, Stride = 1, padding = 0 and number of filter is 6\n",
+    "    F_W = tf.Variable(tf.truncated_normal(shape=(5, 5, input_channel, 6), mean = mu, stddev = sigma))\n",
+    "    F_b = tf.Variable(tf.zeros(6))\n",
+    "    strides = [1, 1, 1, 1]\n",
+    "    padding = 'VALID'\n",
+    "    conv_1_layer = tf.nn.conv2d(x, F_W, strides, padding)\n",
+    "    conv_1_layer = tf.nn.bias_add(conv_1_layer, F_b)\n",
+    "    \n",
+    "    # Activation. RELU\n",
+    "    conv_1_layer = tf.nn.relu(conv_1_layer)\n",
+    "      \n",
+    "    # Pooling. Input = 28x28x6. Output = 14x14x6.\n",
+    "    # for this filter size = 2, Stride = 2, padding = 0 and number of filter is 6\n",
+    "    conv_1_pool = tf.nn.max_pool(conv_1_layer, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')\n",
+    "    \n",
+    "    # Layer 2: Convolutional. Output = 10x10x16.\n",
+    "    # for this filter size = 5, Stride = 1, padding = 0 and number of filter is 16\n",
+    "    F_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 6, 16), mean = mu, stddev = sigma))\n",
+    "    F_b = tf.Variable(tf.zeros(16))\n",
+    "    strides = [1, 1, 1, 1]\n",
+    "    padding = 'VALID'\n",
+    "    conv_2_layer = tf.nn.conv2d(conv_1_pool, F_W, strides, padding)\n",
+    "    conv_2_layer = tf.nn.bias_add(conv_2_layer, F_b)\n",
+    "        \n",
+    "    # Activation. RELU\n",
+    "    conv_2_layer = tf.nn.relu(conv_2_layer)\n",
+    "    # Pooling. Input = 10x10x16. Output = 5x5x16.\n",
+    "    # for this filter size = 2, Stride = 2, padding = 0 and number of filter is 6\n",
+    "    conv_2_pool = tf.nn.max_pool(conv_2_layer, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')\n",
+    "    \n",
+    "    # Flatten. Input = 5x5x16. Output = 400.\n",
+    "    flat_conv = flatten(conv_2_pool)\n",
+    "    \n",
+    "    # Layer 3: Fully Connected. Input = 400. Output = 120.\n",
+    "    weigth_1 = tf.Variable(tf.truncated_normal(shape=(400,120), mean=mu, stddev=sigma))\n",
+    "    bias_1 = tf.Variable(tf.zeros(120))\n",
+    "    fc1 = tf.add(tf.matmul(flat_conv, weigth_1), bias_1)\n",
+    "\n",
+    "    # Activation. RELU\n",
+    "    fc1 = tf.nn.relu(fc1)\n",
+    "    fc1 = tf.nn.dropout(fc1, keep_prob)\n",
+    "    \n",
+    "    # Layer 4: Fully Connected. Input = 120. Output = 84.\n",
+    "    weigth_2 = tf.Variable(tf.truncated_normal(shape=(120,84), mean=mu, stddev=sigma))\n",
+    "    bias_2 = tf.Variable(tf.zeros(84))\n",
+    "    fc2 = tf.add(tf.matmul(fc1, weigth_2), bias_2)\n",
+    "        \n",
+    "    # Activation. RELU\n",
+    "    fc2 = tf.nn.relu(fc2)\n",
+    "    fc2 = tf.nn.dropout(fc2, keep_prob)\n",
+    "\n",
+    "    # Layer 5: Fully Connected. Input = 84. Output = 43.\n",
+    "    weigth_3 = tf.Variable(tf.truncated_normal(shape=(84,43), mean=mu, stddev=sigma))\n",
+    "    bias_3 = tf.Variable(tf.zeros(43))\n",
+    "    logits = tf.add(tf.matmul(fc2, weigth_3), bias_3)\n",
+    "    \n",
+    "    return logits"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Train, Validate and Test the Model"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "A validation set can be used to assess how well the model is performing. A low accuracy on the training and validation\n",
+    "sets imply underfitting. A high accuracy on the training set but low accuracy on the validation set implies overfitting."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "### Train your model here.\n",
+    "### Calculate and report the accuracy on the training and validation set.\n",
+    "### Once a final model architecture is selected, \n",
+    "### the accuracy on the test set should be calculated and reported as well.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "# `x` is a placeholder for a batch of input images.\n",
+    "# `y` is a placeholder for a batch of output labels.\n",
+    "x = tf.placeholder(tf.float32, (None, 32, 32, input_channel))\n",
+    "y = tf.placeholder(tf.int32, (None))\n",
+    "one_hot_y = tf.one_hot(y, 43)\n",
+    "keep_prob = tf.placeholder(tf.float32)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Training Pipeline\n",
+    "rate = 0.001\n",
+    "\n",
+    "logits = LeNet(x)\n",
+    "cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_y, logits=logits)\n",
+    "loss_operation = tf.reduce_mean(cross_entropy)\n",
+    "optimizer = tf.train.AdamOptimizer(learning_rate = rate)\n",
+    "training_operation = optimizer.minimize(loss_operation)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# ## Model Evaluation\n",
+    "correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(one_hot_y, 1))\n",
+    "accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))\n",
+    "saver = tf.train.Saver()\n",
+    "\n",
+    "def evaluate(X_data, y_data):\n",
+    "    num_examples = len(X_data)\n",
+    "    total_accuracy = 0\n",
+    "    sess = tf.get_default_session()\n",
+    "    for offset in range(0, num_examples, BATCH_SIZE):\n",
+    "        batch_x, batch_y = X_data[offset:offset+BATCH_SIZE], y_data[offset:offset+BATCH_SIZE]\n",
+    "        accuracy = sess.run(accuracy_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 1.0})\n",
+    "        total_accuracy += (accuracy * len(batch_x))\n",
+    "    return total_accuracy / num_examples"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Training...\n",
+      "\n",
+      "EPOCH 1 ...\n",
+      "Validation Accuracy = 0.728\n",
+      "\n",
+      "EPOCH 2 ...\n",
+      "Validation Accuracy = 0.844\n",
+      "\n",
+      "EPOCH 3 ...\n",
+      "Validation Accuracy = 0.870\n",
+      "\n",
+      "EPOCH 4 ...\n",
+      "Validation Accuracy = 0.903\n",
+      "\n",
+      "EPOCH 5 ...\n",
+      "Validation Accuracy = 0.919\n",
+      "\n",
+      "EPOCH 6 ...\n",
+      "Validation Accuracy = 0.920\n",
+      "\n",
+      "EPOCH 7 ...\n",
+      "Validation Accuracy = 0.931\n",
+      "\n",
+      "EPOCH 8 ...\n",
+      "Validation Accuracy = 0.934\n",
+      "\n",
+      "EPOCH 9 ...\n",
+      "Validation Accuracy = 0.927\n",
+      "\n",
+      "EPOCH 10 ...\n",
+      "Validation Accuracy = 0.936\n",
+      "\n",
+      "EPOCH 11 ...\n",
+      "Validation Accuracy = 0.935\n",
+      "\n",
+      "Model saved\n"
+     ]
+    }
+   ],
+   "source": [
+    "# ## Train the Model\n",
+    "from sklearn.utils import shuffle\n",
+    "with tf.Session() as sess:\n",
+    "    sess.run(tf.global_variables_initializer())\n",
+    "    num_examples = len(X_train)\n",
+    "    \n",
+    "    print(\"Training...\")\n",
+    "    print()\n",
+    "    for i in range(EPOCHS):\n",
+    "        X_train_processed, y_train = shuffle(X_train_processed, y_train)\n",
+    "        for offset in range(0, num_examples, BATCH_SIZE):\n",
+    "            end = offset + BATCH_SIZE\n",
+    "            batch_x, batch_y = X_train_processed[offset:end], y_train[offset:end]\n",
+    "            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 0.7})\n",
+    "            \n",
+    "        validation_accuracy = evaluate(X_valid_processed, y_valid)\n",
+    "        print(\"EPOCH {} ...\".format(i+1))\n",
+    "        print(\"Validation Accuracy = {:.3f}\".format(validation_accuracy))\n",
+    "        print()\n",
+    "        \n",
+    "    saver.save(sess, './lenet_traffic_sign')\n",
+    "    print(\"Model saved\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "## Step 3: Test a Model on New Images\n",
+    "\n",
+    "To give yourself more insight into how your model is working, download at least five pictures of German traffic signs from the web and use your model to predict the traffic sign type.\n",
+    "\n",
+    "You may find `signnames.csv` useful as it contains mappings from the class id (integer) to the actual sign name."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "INFO:tensorflow:Restoring parameters from ./lenet_traffic_sign\n",
+      "Test Accuracy = 0.920\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Test the model on test data from above\n",
+    "with tf.Session() as sess:\n",
+    "    saver.restore(sess, tf.train.latest_checkpoint('.'))\n",
+    "\n",
+    "    test_accuracy = evaluate(X_test_processed, y_test)\n",
+    "    print(\"Test Accuracy = {:.3f}\".format(test_accuracy))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Load and Output the Images"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Web Image Labels:\n",
+      "[30 12 20 24 19]\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f8421f9ae10>"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7f8421f832e8>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "### Load the images and plot them here.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "# open web downloaded images and also do pre-processing as done above\n",
+    "# Convert image to Gray and then normalize images\n",
+    "import glob\n",
+    "import matplotlib.image as mpimg\n",
+    "import matplotlib.pyplot as plt \n",
+    "from skimage import color\n",
+    "import numpy as np\n",
+    "from scipy import misc\n",
+    "\n",
+    "# Normalize Data\n",
+    "def normalize_web_images(data):\n",
+    "    return (data - 128)/128\n",
+    "\n",
+    "images = glob.glob('GermanDownloadImage/*.png')\n",
+    "X_web_test = np.ndarray(shape=(5,32,32,1), dtype=float)\n",
+    "web_image_idx = 0\n",
+    "\n",
+    "y_web_labels = np.array([-1, -1, -1, -1, -1])\n",
+    "for image in images:\n",
+    "#     print(image)\n",
+    "    img = mpimg.imread(image)\n",
+    "    image_resized = misc.imresize(img, (32, 32))\n",
+    "    gray = color.rgb2gray(image_resized).astype(\"float32\")\n",
+    "    gray_reshaped = np.reshape(gray,(32,32,1))\n",
+    "#     plt.figure(figsize=(1,1))\n",
+    "#     plt.imshow(gray)\n",
+    "#     print(gray.shape)\n",
+    "    X_web_test[web_image_idx] = gray_reshaped\n",
+    "    if image == \"GermanDownloadImage/ice_road.png\":\n",
+    "        y_web_labels[web_image_idx] = 30\n",
+    "    elif image == \"GermanDownloadImage/dang_curve_right.png\":\n",
+    "        y_web_labels[web_image_idx] = 20\n",
+    "    elif image == \"GermanDownloadImage/road_narrow_right.png\":\n",
+    "        y_web_labels[web_image_idx] = 24\n",
+    "    elif image == \"GermanDownloadImage/dang_curve_left.png\":\n",
+    "        y_web_labels[web_image_idx] = 19\n",
+    "    elif image == \"GermanDownloadImage/priority_road.png\":\n",
+    "        y_web_labels[web_image_idx] = 12\n",
+    "    web_image_idx += 1\n",
+    "\n",
+    "X_web_test = normalize_web_images(X_web_test)\n",
+    "\n",
+    "print(\"Web Image Labels:\")\n",
+    "print(y_web_labels)\n",
+    "\n",
+    "img = X_web_test[2].squeeze()\n",
+    "plt.figure(figsize=(1,1))\n",
+    "plt.imshow(img, cmap=\"gray\")\n",
+    "# print(X_web_test.shape)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Predict the Sign Type for Each Image"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "INFO:tensorflow:Restoring parameters from ./lenet_traffic_sign\n",
+      "Test Accuracy = 0.200\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Run the predictions here and use the model to output the prediction for each image.\n",
+    "### Make sure to pre-process the images with the same pre-processing pipeline used earlier.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "# as pre-processing is already done so we can go ahead and start evaluation\n",
+    "with tf.Session() as sess:\n",
+    "    sess.run(tf.global_variables_initializer())\n",
+    "    saver.restore(sess, tf.train.latest_checkpoint('.'))\n",
+    "    web_test_accuracy = evaluate(X_web_test, y_web_labels)\n",
+    "    print(\"Test Accuracy = {:.3f}\".format(web_test_accuracy))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Analyze Performance"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "### Calculate the accuracy for these 5 new images. \n",
+    "### For example, if the model predicted 1 out of 5 signs correctly, it's 20% accurate on these new images.\n",
+    "# Accuracy for the web image is shown in previous cell"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Output Top 5 Softmax Probabilities For Each Image Found on the Web"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "For each of the new images, print out the model's softmax probabilities to show the **certainty** of the model's predictions (limit the output to the top 5 probabilities for each image). [`tf.nn.top_k`](https://www.tensorflow.org/versions/r0.12/api_docs/python/nn.html#top_k) could prove helpful here. \n",
+    "\n",
+    "The example below demonstrates how tf.nn.top_k can be used to find the top k predictions for each image.\n",
+    "\n",
+    "`tf.nn.top_k` will return the values and indices (class ids) of the top k predictions. So if k=3, for each sign, it'll return the 3 largest probabilities (out of a possible 43) and the correspoding class ids.\n",
+    "\n",
+    "Take this numpy array as an example. The values in the array represent predictions. The array contains softmax probabilities for five candidate images with six possible classes. `tf.nn.top_k` is used to choose the three classes with the highest probability:\n",
+    "\n",
+    "```\n",
+    "# (5, 6) array\n",
+    "a = np.array([[ 0.24879643,  0.07032244,  0.12641572,  0.34763842,  0.07893497,\n",
+    "         0.12789202],\n",
+    "       [ 0.28086119,  0.27569815,  0.08594638,  0.0178669 ,  0.18063401,\n",
+    "         0.15899337],\n",
+    "       [ 0.26076848,  0.23664738,  0.08020603,  0.07001922,  0.1134371 ,\n",
+    "         0.23892179],\n",
+    "       [ 0.11943333,  0.29198961,  0.02605103,  0.26234032,  0.1351348 ,\n",
+    "         0.16505091],\n",
+    "       [ 0.09561176,  0.34396535,  0.0643941 ,  0.16240774,  0.24206137,\n",
+    "         0.09155967]])\n",
+    "```\n",
+    "\n",
+    "Running it through `sess.run(tf.nn.top_k(tf.constant(a), k=3))` produces:\n",
+    "\n",
+    "```\n",
+    "TopKV2(values=array([[ 0.34763842,  0.24879643,  0.12789202],\n",
+    "       [ 0.28086119,  0.27569815,  0.18063401],\n",
+    "       [ 0.26076848,  0.23892179,  0.23664738],\n",
+    "       [ 0.29198961,  0.26234032,  0.16505091],\n",
+    "       [ 0.34396535,  0.24206137,  0.16240774]]), indices=array([[3, 0, 5],\n",
+    "       [0, 1, 4],\n",
+    "       [0, 5, 1],\n",
+    "       [1, 3, 5],\n",
+    "       [1, 4, 3]], dtype=int32))\n",
+    "```\n",
+    "\n",
+    "Looking just at the first row we get `[ 0.34763842,  0.24879643,  0.12789202]`, you can confirm these are the 3 largest probabilities in `a`. You'll also notice `[3, 0, 5]` are the corresponding indices."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "INFO:tensorflow:Restoring parameters from ./lenet_traffic_sign\n",
+      "Values:\n",
+      "[[ 0.25571868  0.13096836  0.12640111  0.08793772  0.06752685]\n",
+      " [ 0.47174165  0.11633343  0.09122243  0.05263287  0.03632661]\n",
+      " [ 0.19543132  0.12791805  0.12464444  0.1010904   0.07517165]\n",
+      " [ 0.26365176  0.13626258  0.09541377  0.08774038  0.06815168]\n",
+      " [ 0.23655921  0.17187037  0.10815673  0.0737071   0.07326829]]\n",
+      "Indices:\n",
+      "[[12  9 10 20 30]\n",
+      " [12 10  9 20  3]\n",
+      " [12 10  9 20 30]\n",
+      " [12 10 20 30  9]\n",
+      " [12 10  9 30 20]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Print out the top five softmax probabilities for the predictions on the German traffic sign images found on the web. \n",
+    "### Feel free to use as many code cells as needed.\n",
+    "with tf.Session() as sess:\n",
+    "    sess.run(tf.global_variables_initializer())\n",
+    "    saver.restore(sess, tf.train.latest_checkpoint('.'))\n",
+    "    softmax_probability = tf.nn.softmax(logits)\n",
+    "    top_5 = tf.nn.top_k(softmax_probability, 5)\n",
+    "    top_5_result = sess.run(top_5, feed_dict={x: X_web_test, keep_prob: 1.0})\n",
+    "    print(\"Values:\")\n",
+    "    print(top_5_result.values)\n",
+    "    print(\"Indices:\")\n",
+    "    print(top_5_result.indices)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Project Writeup\n",
+    "\n",
+    "Once you have completed the code implementation, document your results in a project writeup using this [template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) as a guide. The writeup can be in a markdown or pdf file. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "> **Note**: Once you have completed all of the code implementations and successfully answered each question above, you may finalize your work by exporting the iPython Notebook as an HTML document. You can do this by using the menu above and navigating to  \\n\",\n",
+    "    \"**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "## Step 4 (Optional): Visualize the Neural Network's State with Test Images\n",
+    "\n",
+    " This Section is not required to complete but acts as an additional excersise for understaning the output of a neural network's weights. While neural networks can be a great learning device they are often referred to as a black box. We can understand what the weights of a neural network look like better by plotting their feature maps. After successfully training your neural network you can see what it's feature maps look like by plotting the output of the network's weight layers in response to a test stimuli image. From these plotted feature maps, it's possible to see what characteristics of an image the network finds interesting. For a sign, maybe the inner network feature maps react with high activation to the sign's boundary outline or to the contrast in the sign's painted symbol.\n",
+    "\n",
+    " Provided for you below is the function code that allows you to get the visualization output of any tensorflow weight layer you want. The inputs to the function should be a stimuli image, one used during training or a new one you provided, and then the tensorflow variable name that represents the layer's state during the training process, for instance if you wanted to see what the [LeNet lab's](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) feature maps looked like for it's second convolutional layer you could enter conv2 as the tf_activation variable.\n",
+    "\n",
+    "For an example of what feature map outputs look like, check out NVIDIA's results in their paper [End-to-End Deep Learning for Self-Driving Cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/) in the section Visualization of internal CNN State. NVIDIA was able to show that their network's inner weights had high activations to road boundary lines by comparing feature maps from an image with a clear path to one without. Try experimenting with a similar test to show that your trained network's weights are looking for interesting features, whether it's looking at differences in feature maps from images with or without a sign, or even what feature maps look like in a trained network vs a completely untrained one on the same sign image.\n",
+    "\n",
+    "<figure>\n",
+    " <img src=\"visualize_cnn.png\" width=\"380\" alt=\"Combined Image\" />\n",
+    " <figcaption>\n",
+    " <p></p> \n",
+    " <p style=\"text-align: center;\"> Your output should look something like this (above)</p> \n",
+    " </figcaption>\n",
+    "</figure>\n",
+    " <p></p> \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "### Visualize your network's feature maps here.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "\n",
+    "# image_input: the test image being fed into the network to produce the feature maps\n",
+    "# tf_activation: should be a tf variable name used during your training procedure that represents the calculated state of a specific weight layer\n",
+    "# activation_min/max: can be used to view the activation contrast in more detail, by default matplot sets min and max to the actual min and max values of the output\n",
+    "# plt_num: used to plot out multiple different weight feature map sets on the same block, just extend the plt number for each new feature map entry\n",
+    "\n",
+    "def outputFeatureMap(image_input, tf_activation, activation_min=-1, activation_max=-1 ,plt_num=1):\n",
+    "    # Here make sure to preprocess your image_input in a way your network expects\n",
+    "    # with size, normalization, ect if needed\n",
+    "    # image_input =\n",
+    "    # Note: x should be the same name as your network's tensorflow data placeholder variable\n",
+    "    # If you get an error tf_activation is not defined it may be having trouble accessing the variable from inside a function\n",
+    "    activation = tf_activation.eval(session=sess,feed_dict={x : image_input})\n",
+    "    featuremaps = activation.shape[3]\n",
+    "    plt.figure(plt_num, figsize=(15,15))\n",
+    "    for featuremap in range(featuremaps):\n",
+    "        plt.subplot(6,8, featuremap+1) # sets the number of feature maps to show on each row and column\n",
+    "        plt.title('FeatureMap ' + str(featuremap)) # displays the feature map number\n",
+    "        if activation_min != -1 & activation_max != -1:\n",
+    "            plt.imshow(activation[0,:,:, featuremap], interpolation=\"nearest\", vmin =activation_min, vmax=activation_max, cmap=\"gray\")\n",
+    "        elif activation_max != -1:\n",
+    "            plt.imshow(activation[0,:,:, featuremap], interpolation=\"nearest\", vmax=activation_max, cmap=\"gray\")\n",
+    "        elif activation_min !=-1:\n",
+    "            plt.imshow(activation[0,:,:, featuremap], interpolation=\"nearest\", vmin=activation_min, cmap=\"gray\")\n",
+    "        else:\n",
+    "            plt.imshow(activation[0,:,:, featuremap], interpolation=\"nearest\", cmap=\"gray\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "anaconda-cloud": {},
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}
